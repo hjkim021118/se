@@ -31,18 +31,18 @@ flowchart LR
     %% System boundary
     subgraph MiniDrive [" 미니 드라이브 시스템 "]
         direction TB
-        UC1(["로그인<br/>(FR-001)"])
-        UC2(["파일 업로드<br/>(FR-003)"])
-        UC3(["파일 다운로드"])
-        UC4(["파일/폴더 검색"])
-        UC5(["공유 링크 생성<br/>(FR-005)"])
-        UC6(["파일 삭제/복구<br/>(FR-004)"])
-        UC7(["권한 기반 접근<br/>(FR-002)"])
-        UC8(["공유 링크로 다운로드"])
-        UC9(["사용자 계정 관리"])
-        UC10(["저장 용량 할당"])
-        UC11(["계정 잠금 처리"])
-        UC12(["바이러스/확장자 검증"])
+        UC1(["로그인하기<br/>(FR-001)"])
+        UC2(["파일 업로드하기<br/>(FR-003)"])
+        UC3(["파일 다운로드하기"])
+        UC4(["파일/폴더 검색하기"])
+        UC5(["공유 링크 생성하기<br/>(FR-005)"])
+        UC6(["파일 삭제/복구하기<br/>(FR-004)"])
+        UC7(["권한 기반 접근하기<br/>(FR-002)"])
+        UC8(["공유 링크로 다운로드하기"])
+        UC9(["사용자 계정 관리하기"])
+        UC10(["저장 용량 할당하기"])
+        UC11(["계정 잠금 처리하기"])
+        UC12(["바이러스/확장자 검증하기"])
     end
 
     %% User connections
@@ -206,6 +206,17 @@ classDiagram
         +lockAccount(userId) void
     }
 
+    class WebUI {
+        +displayProgressBar(percent) void
+        +showMessage(msg) void
+    }
+
+    class UploadController {
+        +uploadFile(file, metadata) void
+        -validateSize(size) boolean
+        -validateExt(ext) boolean
+    }
+
     %% Relationships
     User "1" --> "*" FileEntity : owns
     User "1" --> "*" ShareLink : creates
@@ -217,6 +228,14 @@ classDiagram
     AuthService --> User : authenticates
     AuditLog ..> User : tracks
     AuditLog ..> FileEntity : tracks
+
+    %% Controller & UI Relationships (Added for Consistency)
+    WebUI --> UploadController : requests
+    WebUI --> AuthService : verifyToken
+    UploadController --> ResourceMonitor : checks status
+    UploadController --> StorageManager : delegates saving
+    UploadController --> AuditLog : records
+    UploadController ..> FileEntity : creates
 
     note for ResourceMonitor "QR-002: CPU 70%, MEM 80% 임계치 관리"
     note for StorageManager "NFR-002: 24시간 이내 복구 지점 유지"
