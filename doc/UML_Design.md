@@ -360,3 +360,8 @@ sequenceDiagram
 | QR-004 | RBAC | UC-001, UC-007 | User.role | 2 |
 
 ---
+
+## 6. 참고문서
+
+| 번호 | 파일명 | 위치 |
+| 1 | 요구사항 정의서(V 1.3) | `doc/project_requirement_define.md`|
