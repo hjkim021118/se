@@ -169,13 +169,6 @@ classDiagram
         +isExpired() boolean
     }
 
-    class ResourceMonitor {
-        -double currentCpu
-        -double currentMemory
-        -int activeConnections
-        +checkThreshold() boolean
-        +scaleResources() void
-    }
 
     class StorageManager {
         -String storagePath
@@ -224,7 +217,6 @@ classDiagram
     Folder "1" o-- "*" Folder : nested
     FileEntity "1" --> "*" ShareLink : shared via
     StorageManager ..> FileEntity : manages
-    StorageManager ..> ResourceMonitor : queries
     AuthService --> User : authenticates
     AuditLog ..> User : tracks
     AuditLog ..> FileEntity : tracks
@@ -232,12 +224,10 @@ classDiagram
     %% Controller & UI Relationships (Added for Consistency)
     WebUI --> UploadController : requests
     WebUI --> AuthService : verifyToken
-    UploadController --> ResourceMonitor : checks status
     UploadController --> StorageManager : delegates saving
     UploadController --> AuditLog : records
     UploadController ..> FileEntity : creates
 
-    note for ResourceMonitor "QR-002: CPU 70%, MEM 80% 임계치 관리"
     note for StorageManager "NFR-002: 24시간 이내 복구 지점 유지"
     note for AuthService "FR-001: 5회 실패 시 30분 잠금"
 ```
@@ -250,7 +240,6 @@ classDiagram
 | **FileEntity** | fileId, name, size, type, version, isDeleted | updateMetadata(), moveToTrash() | 파일의 메타데이터 및 상태 관리 |
 | **Folder** | folderId, name, parentId | addFile(), rename() | 다단계 폴더 구조 지원 |
 | **ShareLink** | linkId, targetFileId, expirationDate | generateUrl(), isExpired() | 외부 공유를 위한 상태 제어 |
-| **ResourceMonitor** | currentCpu, currentMemory, activeConnections | checkThreshold(), scaleResources() | [가용성 제어] 서버 자원 임계치(70%/80%) 관리 |
 | **StorageManager** | storagePath, backupPath | saveWithReplication(), restoreData() | [신뢰성 보장] 분산 저장 및 24시간 복구 지점 관리 |
 | **AuthService** | maxFailCount | authenticate(), lockAccount() | 인증 및 계정 잠금 처리 |
 | **AuditLog** | logId, userId, action, timestamp | record() | 파일별 접근 로그 기록 (QR-003) |
@@ -259,7 +248,6 @@ classDiagram
 
 - **연관(`-->`)**: User-FileEntity (소유 관계, 1:N)
 - **집합(`o--`)**: Folder가 FileEntity와 하위 Folder를 포함하나, Folder 삭제 시 내부 파일은 휴지통으로 이동 가능 (약한 결합)
-- **의존(`..>`)**: StorageManager가 ResourceMonitor의 상태를 조회하여 저장 전략 결정
 
 ---
 
@@ -274,7 +262,6 @@ sequenceDiagram
     participant UI as Web UI<br/>(Progress Bar)
     participant Auth as AuthService
     participant Ctrl as UploadController
-    participant Mon as ResourceMonitor
     participant Store as StorageManager
     participant DB as Database
     participant Log as AuditLog
@@ -336,10 +323,9 @@ sequenceDiagram
 
 1. **1~2단계** — 사용자가 파일을 선택하면 UI가 인증 토큰의 유효성을 먼저 확인함
 2. **3단계** — Controller가 파일 크기/확장자 검증을 수행하여 차단 정책을 적용함 (FR-003).
-3. **4단계** — ResourceMonitor가 CPU·메모리·연결 수를 조회해 임계치를 초과하면 자동 스케일링하거나 대기열로 보냄 (QR-002).
-4. **5단계** — StorageManager가 주/백업 스토리지에 이중 저장하여 장애 시 우회 가능하도록 함 (NFR-002).
-5. **6~7단계** — 메타데이터를 DB에 기록하고 AuditLog에 행위를 기록 (QR-003).
-6. **반복 구간** — 업로드 중 Progress Bar가 실시간으로 % 진행률을 사용자에게 보여줌 (인터페이스 요구사항).
+3. **4단계** — StorageManager가 주/백업 스토리지에 이중 저장하여 장애 시 우회 가능하도록 함 (NFR-002).
+4. **5~6단계** — 메타데이터를 DB에 기록하고 AuditLog에 행위를 기록 (QR-003).
+5. **반복 구간** — 업로드 중 Progress Bar가 실시간으로 % 진행률을 사용자에게 보여줌 (인터페이스 요구사항).
 
 ---
 
@@ -352,10 +338,8 @@ sequenceDiagram
 | FR-003 | 파일 업로드(2GB/차단) | UC-002 | FileEntity, StorageManager | 3 |
 | FR-004 | 파일 복구 및 삭제 | UC-006 | FileEntity (moveToTrash) | — |
 | FR-005 | 공유 링크 관리 | UC-005 | ShareLink | — |
-| NFR-001 | 200명 동시·3초 응답 | UC-002 | ResourceMonitor | 4 (전체) |
 | NFR-002 | 24시간 복구 지점 | UC-002 | StorageManager | 5 |
 | NFR-003 | SSL/TLS, AES-256 | 전 유스케이스 | — | 2 |
-| QR-002 | CPU 70%/MEM 80% | UC-002 | ResourceMonitor | 4 |
 | QR-003 | Audit Trail(로그 기록) | 전 유스케이스 | AuditLog | 7 |
 | QR-004 | RBAC | UC-001, UC-007 | User.role | 2 |
 
