@@ -215,7 +215,7 @@ classDiagram
     User "1" --> "*" ShareLink : creates
     Folder "1" o-- "*" FileEntity : contains
     Folder "1" o-- "*" Folder : nested
-    FileEntity "1" --> "*" ShareLink : shared via
+    FileEntity "1" *-- "*" ShareLink : shared via
     StorageManager ..> FileEntity : manages
     AuthService --> User : authenticates
     AuditLog ..> User : tracks
